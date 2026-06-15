@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern Desk — Technical Analysis Drills</title>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #141923; --panel-2: #1b2230; --grid: #232c3b;
+    --ink: #e6edf3; --muted: #7d8da3; --up: #3fb68b; --down: #e0556b;
+    --accent: #d6a84a; --accent-soft: rgba(214,168,74,0.12);
+    --correct: #3fb68b; --wrong: #e0556b; --border: #2a3445;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: radial-gradient(1200px 600px at 80% -10%, #161d2b 0%, transparent 60%), var(--bg);
+    color: var(--ink); font-family: "DM Sans","Segoe UI",system-ui,sans-serif;
+    min-height: 100vh; padding: clamp(16px,4vw,48px); line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  .eyebrow { font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.32em; text-transform:uppercase; color:var(--accent); display:flex; align-items:center; gap:10px; }
+  .eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--up); animation:pulse 2.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(63,182,139,.5);}70%{box-shadow:0 0 0 8px rgba(63,182,139,0);}100%{box-shadow:0 0 0 0 rgba(63,182,139,0);} }
+  h1 { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:clamp(28px,6vw,44px); letter-spacing:-.01em; margin:10px 0 6px; }
+  h1 .blink { color:var(--accent); animation:blink 1.1s steps(2) infinite; }
+  @keyframes blink { 0%,50%{opacity:1;}51%,100%{opacity:0;} }
+  .sub { color:var(--muted); font-size:14px; max-width:48ch; }
+  .config { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:22px; margin-top:22px; }
+  .config h2 { font-family:"IBM Plex Mono",monospace; font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+  .seg { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .seg button { flex:1; min-width:140px; background:var(--panel-2); border:1px solid var(--border); color:var(--ink); padding:14px; border-radius:10px; cursor:pointer; font-family:inherit; text-align:left; transition:.15s; }
+  .seg button .t { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:14px; letter-spacing:.04em; }
+  .seg button .d { font-size:12px; color:var(--muted); margin-top:3px; }
+  .seg button:hover { border-color:var(--accent); }
+  .seg button.on { border-color:var(--accent); background:var(--accent-soft); }
+  .seg button.on .t { color:var(--accent); }
+  .start-btn,.next,.restart { width:100%; background:var(--accent); color:#1a1205; border:none; padding:14px; border-radius:10px; font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:filter .15s; }
+  .start-btn:hover,.next:hover,.restart:hover { filter:brightness(1.08); }
+  .scorebar { display:flex; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:22px 0 24px; font-family:"IBM Plex Mono",monospace; }
+  .stat { flex:1; background:var(--panel); padding:12px 14px; }
+  .stat .label { font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+  .stat .val { font-size:22px; font-weight:600; margin-top:2px; }
+  .stat .val.green { color:var(--up); } .stat .val.amber { color:var(--accent); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .chart-head { display:flex; justify-content:space-between; align-items:baseline; padding:14px 18px; border-bottom:1px solid var(--border); font-family:"IBM Plex Mono",monospace; gap:8px; }
+  .chart-head .sym { font-weight:600; letter-spacing:.06em; }
+  .chart-head .tf { color:var(--muted); font-size:12px; flex:1; }
+  .chart-head .timer { color:var(--accent); font-size:13px; font-variant-numeric:tabular-nums; }
+  .chart-head .timer.low { color:var(--down); }
+  .chart-head .qno { color:var(--muted); font-size:12px; }
+  .chart-stage { padding:8px 8px 0; background:var(--panel-2); }
+  svg { width:100%; height:auto; display:block; }
+  .prompt { padding:18px 18px 6px; font-size:14px; color:var(--muted); }
+  .options { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px 18px 20px; }
+  @media (max-width:480px){ .options{grid-template-columns:1fr;} .seg button{min-width:0;} }
+  .opt { text-align:left; background:var(--panel-2); border:1px solid var(--border); color:var(--ink); padding:13px 15px; border-radius:9px; font-size:14px; font-family:inherit; cursor:pointer; transition:.12s; display:flex; align-items:center; gap:10px; }
+  .opt .key { font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted); border:1px solid var(--border); border-radius:5px; padding:1px 6px; }
+  .opt:hover:not(:disabled){ border-color:var(--accent); background:var(--accent-soft); }
+  .opt:active:not(:disabled){ transform:translateY(1px); }
+  .opt:disabled { cursor:default; }
+  .opt.correct { border-color:var(--correct); background:rgba(63,182,139,.14); color:#d7f5e8; }
+  .opt.correct .key { border-color:var(--correct); color:var(--correct); }
+  .opt.wrong { border-color:var(--wrong); background:rgba(224,85,107,.14); color:#fadbe1; }
+  .opt.wrong .key { border-color:var(--wrong); color:var(--wrong); }
+  .opt.dim { opacity:.45; }
+  .explain { border-top:1px solid var(--border); padding:16px 18px; background:var(--panel); display:none; }
+  .explain.show { display:block; animation:fade .25s ease; }
+  @keyframes fade { from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;} }
+  .verdict { font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .verdict.hit { color:var(--up); } .verdict.miss { color:var(--down); }
+  .explain p { font-size:14px; color:#c4cfde; }
+  .bias { display:inline-block; margin-top:10px; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; padding:3px 9px; border-radius:5px; border:1px solid var(--border); }
+  .bias.bull { color:var(--up); border-color:rgba(63,182,139,.4); }
+  .bias.bear { color:var(--down); border-color:rgba(224,85,107,.4); }
+  .bias.neutral { color:var(--muted); }
+  .next { margin-top:14px; }
+  .end { text-align:center; padding:40px 24px; display:none; }
+  .end.show { display:block; }
+  .end .big { font-family:"IBM Plex Mono",monospace; font-size:56px; font-weight:600; }
+  .end .grade { font-size:14px; color:var(--muted); margin-top:4px; letter-spacing:.1em; text-transform:uppercase; }
+  .end .line { color:#c4cfde; margin:18px auto 0; max-width:44ch; font-size:14px; }
+  .review { text-align:left; margin:24px auto 0; max-width:440px; }
+  .review .row { display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace; font-size:12px; padding:7px 0; border-bottom:1px solid var(--border); color:var(--muted); }
+  .review .row .ok { color:var(--up); } .review .row .no { color:var(--down); }
+  .restart { max-width:240px; margin:24px auto 0; display:block; }
+  footer { text-align:center; margin-top:26px; color:var(--muted); font-size:11px; font-family:"IBM Plex Mono",monospace; letter-spacing:.08em; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Live Drill · Pattern Recognition</div>
+    <h1>Pattern Desk<span class="blink">_</span></h1>
+    <p class="sub">Read the price action, call the formation. No labels, no hints until you commit.</p>
+  </header>
+
+  <div class="config" id="config">
+    <h2>Pattern set</h2>
+    <div class="seg" id="set-seg">
+      <button data-set="chart" class="on"><div class="t">Chart patterns</div><div class="d">Multi-candle formations: triangles, flags, head &amp; shoulders</div></button>
+      <button data-set="candle"><div class="t">Candlesticks</div><div class="d">Single &amp; dual-candle signals: doji, engulfing, hammer</div></button>
+      <button data-set="mixed"><div class="t">Mixed bag</div><div class="d">Both sets shuffled together</div></button>
+    </div>
+    <h2>Difficulty</h2>
+    <div class="seg" id="diff-seg">
+      <button data-diff="easy"><div class="t">Clean</div><div class="d">Low noise · clear shapes · no timer</div></button>
+      <button data-diff="normal" class="on"><div class="t">Normal</div><div class="d">Moderate noise · varied distractors</div></button>
+      <button data-diff="hard"><div class="t">Hard</div><div class="d">Heavy noise · lookalike traps · 15s timer</div></button>
+    </div>
+    <button class="start-btn" id="start">Start drill →</button>
+  </div>
+
+  <div id="game" class="hide">
+    <div class="scorebar">
+      <div class="stat"><div class="label">Streak</div><div class="val green" id="streak">0</div></div>
+      <div class="stat"><div class="label">Correct</div><div class="val amber" id="score">0</div></div>
+      <div class="stat"><div class="label">Progress</div><div class="val" id="prog">1/10</div></div>
+    </div>
+    <div class="card" id="card">
+      <div class="chart-head">
+        <span class="sym" id="sym">ACME / USD</span>
+        <span class="tf" id="tf">1D · candles</span>
+        <span class="timer hide" id="timer">0:15</span>
+        <span class="qno" id="qno">Q1</span>
+      </div>
+      <div class="chart-stage"><div id="chart"></div></div>
+      <div class="prompt" id="prompt">Which pattern is forming?</div>
+      <div class="options" id="options"></div>
+      <div class="explain" id="explain">
+        <div class="verdict" id="verdict"></div>
+        <p id="exp-text"></p>
+        <span class="bias" id="bias"></span>
+        <button class="next" id="next">Next chart →</button>
+      </div>
+    </div>
+    <div class="card end" id="end">
+      <div class="big" id="end-score">0/10</div>
+      <div class="grade" id="end-grade"></div>
+      <p class="line" id="end-line"></p>
+      <div class="review" id="review"></div>
+      <button class="restart" id="restart">New drill ↻</button>
+    </div>
+  </div>
+
+  <footer>Educational drill — patterns are probabilistic, not predictive. Not investment advice.</footer>
+</div>
+
+<script>
+const W=720, Hp=250, Hv=64, GAP=10, PADX=24, PADY=20, Htot=Hp+GAP+Hv;
+
+function renderChart(candles, overlays, showVol, splitAt, fixedScale, totalSlots){
+  let max, min;
+  if(fixedScale){ max=fixedScale.max; min=fixedScale.min; }
+  else {
+    const highs=candles.map(c=>c.h), lows=candles.map(c=>c.l);
+    max=Math.max(...highs); min=Math.min(...lows);
+    const pad=(max-min)*0.12; max+=pad; min-=pad;
+  }
+  const n=totalSlots||candles.length, slot=(W-2*PADX)/n, cw=Math.min(slot*0.62,14);
+  const yP=p=>PADY+(max-p)/(max-min)*(Hp-2*PADY);
+  let grid="";
+  for(let i=0;i<=4;i++){const y=PADY+i*(Hp-2*PADY)/4; grid+=`<line x1="${PADX}" y1="${y}" x2="${W-PADX}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`;}
+  let ov="";
+  (overlays||[]).forEach(o=>{const pts=o.pts.map(([i,p])=>`${PADX+slot*i+slot/2},${yP(p)}`).join(" ");ov+=`<polyline points="${pts}" fill="none" stroke="${o.color||'var(--accent)'}" stroke-width="1.6" stroke-dasharray="${o.dash||'5 5'}" opacity=".85"/>`;});
+  // breakout divider
+  if(splitAt!=null && splitAt<n){
+    const dx=PADX+slot*splitAt;
+    ov+=`<line x1="${dx}" y1="${PADY-4}" x2="${dx}" y2="${Hp-PADY+4}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 4" opacity=".5"/>`;
+    ov+=`<text x="${dx+4}" y="${PADY+6}" fill="var(--accent)" font-size="9" font-family="monospace" letter-spacing="1" opacity=".8">YOUR CALL</text>`;
+  }
+  let body="";
+  candles.forEach((c,i)=>{const x=PADX+slot*i+slot/2,up=c.c>=c.o,col=up?'var(--up)':'var(--down)';const top=Math.min(yP(c.o),yP(c.c)),bot=Math.max(yP(c.o),yP(c.c));const isBreak=(splitAt!=null && i>=splitAt);const extra=isBreak?' opacity="0.95"':'';body+=`<line x1="${x}" y1="${yP(c.h)}" x2="${x}" y2="${yP(c.l)}" stroke="${col}" stroke-width="1.4"${extra}/>`;body+=`<rect x="${x-cw/2}" y="${top}" width="${cw}" height="${Math.max(bot-top,1.5)}" fill="${col}" rx="1"${extra}/>`;});
+  let vol=""; const totalH=showVol?Htot:Hp;
+  if(showVol){const vmax=(fixedScale&&fixedScale.vmax)?fixedScale.vmax:Math.max(...candles.map(c=>c.v||1)),vTop=Hp+GAP;vol+=`<line x1="${PADX}" y1="${vTop}" x2="${W-PADX}" y2="${vTop}" stroke="var(--grid)" stroke-width="1"/>`;candles.forEach((c,i)=>{const x=PADX+slot*i+slot/2,up=c.c>=c.o,h=((c.v||1)/vmax)*(Hv-6);vol+=`<rect x="${x-cw/2}" y="${vTop+Hv-h}" width="${cw}" height="${h}" fill="${up?'rgba(63,182,139,.55)':'rgba(224,85,107,.55)'}" rx="1"/>`;});vol+=`<text x="${PADX}" y="${vTop-3}" fill="var(--muted)" font-size="9" font-family="monospace" letter-spacing="1">VOL</text>`;}
+  return `<svg viewBox="0 0 ${W} ${totalH}" preserveAspectRatio="xMidYMid meet" role="img">${grid}${ov}${body}${vol}</svg>`;
+}
+
+const R=(a,b)=>a+Math.random()*(b-a);
+let NOISE=0.6;
+function vv(base){return Math.round(base*(1+R(-0.25,0.25)));}
+function candle(o,c,wu,wd,vol){wu=wu==null?R(0.3,1):wu;wd=wd==null?R(0.3,1):wd;return{o,h:Math.max(o,c)+wu,l:Math.min(o,c)-wd,c,v:vol==null?vv(50):vol};}
+function walk(points,jit){jit=(jit==null?0.5:jit)*NOISE/0.6;const out=[];let prev=points[0];for(let s=0;s<points.length-1;s++){const from=points[s],to=points[s+1],steps=5;for(let k=1;k<=steps;k++){const t=k/steps,target=from+(to-from)*t+R(-jit,jit);out.push(candle(prev,target,null,null,vv(45+Math.abs(target-prev)*30)));prev=target;}}return out;}
+function ctx(direction,len,startP){const pts=[startP];for(let i=0;i<len;i++)pts.push(pts[pts.length-1]+direction*R(0.7,1.3));return walk(pts,0.25);}
+// Generate the "what happened next" breakout from the last candle, per bias.
+function continuation(lastClose, bias, steps){
+  steps=steps||7;
+  let dir = bias==="bull"?1 : bias==="bear"?-1 : (Math.random()<0.5?1:-1);
+  const pts=[lastClose];
+  // first 1-2 candles drift, then accelerate in the breakout direction
+  for(let i=0;i<steps;i++){
+    const accel = i<2 ? R(0.15,0.45) : R(0.7,1.4);
+    pts.push(pts[pts.length-1] + dir*accel);
+  }
+  const out=walk(pts,0.3);
+  // bump volume on the breakout candles to mimic confirmation
+  out.forEach((c,i)=>{ c.v = Math.round((c.v||50) * (i>=2?1.6:1.1)); });
+  return {candles:out, dir};
+}
+
+const CHART={
+  head_shoulders:{name:"Head & Shoulders",bias:"bear",make(){const c=walk([10,14,11,17,11,13.5,10.5],0.5);return{candles:c,overlays:[{pts:[[2,11],[c.length-3,11]],color:'var(--down)',dash:'6 4'}]};},why:"Three peaks — a higher middle ‘head’ between two lower ‘shoulders’ — over a roughly flat neckline. A close below the neckline signals a likely reversal lower."},
+  inv_head_shoulders:{name:"Inverse Head & Shoulders",bias:"bull",make(){const c=walk([17,13,16,10,16,13.5,17.5],0.5);return{candles:c,overlays:[{pts:[[2,16],[c.length-3,16]],color:'var(--up)',dash:'6 4'}]};},why:"A deep central trough (‘head’) flanked by two shallower troughs below a flat neckline. Breaking up through the neckline points to a bullish reversal."},
+  double_top:{name:"Double Top",bias:"bear",make(){const c=walk([10,16,12,16,10.5],0.45);return{candles:c,overlays:[{pts:[[5,16],[15,16]],color:'var(--down)',dash:'4 4'}]};},why:"Two peaks at nearly the same level (an ‘M’) with a dip between. Failing to make a new high then breaking the middle low warns of a reversal down."},
+  double_bottom:{name:"Double Bottom",bias:"bull",make(){const c=walk([17,11,15,11,17],0.45);return{candles:c,overlays:[{pts:[[5,11],[15,11]],color:'var(--up)',dash:'4 4'}]};},why:"Two troughs at a similar level (a ‘W’) with a bounce between. Holding support twice then breaking the middle high suggests a bullish reversal."},
+  asc_triangle:{name:"Ascending Triangle",bias:"bull",make(){const c=walk([11,15.5,12.5,15.5,13.5,15.5,14.3],0.35);return{candles:c,overlays:[{pts:[[1,15.6],[c.length-2,15.6]],color:'var(--down)',dash:'5 4'},{pts:[[1,11],[c.length-2,14.6]],color:'var(--up)',dash:'5 4'}]};},why:"A flat resistance ceiling with rising higher lows underneath. Buyers stepping up on each dip tends to resolve as a breakout through the ceiling."},
+  desc_triangle:{name:"Descending Triangle",bias:"bear",make(){const c=walk([16,11.5,15,11.5,14,11.5,12.7],0.35);return{candles:c,overlays:[{pts:[[1,11.4],[c.length-2,11.4]],color:'var(--up)',dash:'5 4'},{pts:[[1,16],[c.length-2,12.4]],color:'var(--down)',dash:'5 4'}]};},why:"A flat support floor with descending lower highs pressing down on it. Sellers capping each rally usually breaks support to the downside."},
+  bull_flag:{name:"Bull Flag",bias:"bull",make(){const pole=walk([10,18],0.3),flag=walk([18,17,17.3,16.6,17,16.4],0.25),c=[...pole,...flag],s=pole.length;return{candles:c,overlays:[{pts:[[s,18.2],[c.length-1,16.8]],color:'var(--muted)',dash:'4 3'},{pts:[[s,17.2],[c.length-1,15.9]],color:'var(--muted)',dash:'4 3'}]};},why:"A steep rally (the ‘pole’) then a tight, slightly downward-sloping pause. The consolidation digests gains before price typically continues higher."},
+  bear_flag:{name:"Bear Flag",bias:"bear",make(){const pole=walk([18,10],0.3),flag=walk([10,11,10.7,11.4,11,11.6],0.25),c=[...pole,...flag],s=pole.length;return{candles:c,overlays:[{pts:[[s,11.6],[c.length-1,12.2]],color:'var(--muted)',dash:'4 3'},{pts:[[s,10.6],[c.length-1,11.3]],color:'var(--muted)',dash:'4 3'}]};},why:"A sharp sell-off then a weak, slightly upward-drifting bounce. The counter-trend pause usually resolves with another leg down."},
+  falling_wedge:{name:"Falling Wedge",bias:"bull",make(){const c=walk([17,13,15.5,12,14.2,11.6,13.2],0.3);return{candles:c,overlays:[{pts:[[1,17],[c.length-2,12.6]],color:'var(--down)',dash:'5 4'},{pts:[[1,13],[c.length-2,11.5]],color:'var(--up)',dash:'5 4'}]};},why:"Two down-sloping lines converging, highs falling faster than lows. Selling pressure fades into the apex and price often breaks upward."},
+  rising_wedge:{name:"Rising Wedge",bias:"bear",make(){const c=walk([11,15,12.5,16,13.8,16.6,14.8],0.3);return{candles:c,overlays:[{pts:[[1,15],[c.length-2,16.8]],color:'var(--down)',dash:'5 4'},{pts:[[1,11],[c.length-2,14.6]],color:'var(--up)',dash:'5 4'}]};},why:"Two up-sloping lines converging, lows rising faster than highs. Momentum narrows as buyers tire, and price often breaks downward."},
+  cup_handle:{name:"Cup & Handle",bias:"bull",make(){const c=walk([16,14,12.2,11.6,12.2,14,16],0.3),handle=walk([16,15.2,15.5,14.9,15.3],0.2),all=[...c,...handle];return{candles:all,overlays:[{pts:[[0,16.1],[all.length-1,16.1]],color:'var(--up)',dash:'5 4'}]};},why:"A rounded ‘U’ base then a small, shallow pullback (the handle) near the prior high. A breakout above the rim reads as bullish continuation."},
+  rect_range:{name:"Rectangle (Range)",bias:"neutral",make(){const c=walk([12,15.5,12.2,15.4,12.1,15.5,12.3,15.4],0.3);return{candles:c,overlays:[{pts:[[1,15.6],[c.length-2,15.6]],color:'var(--down)',dash:'5 4'},{pts:[[1,12],[c.length-2,12]],color:'var(--up)',dash:'5 4'}]};},why:"Price oscillates between horizontal support and resistance with no clear slope. A consolidation; the eventual breakout direction sets the next trend."}
+};
+
+const CANDLE={
+  doji:{name:"Doji",bias:"neutral",zoom:true,make(){const c=ctx(1,4,11);const o=c[c.length-1].c,close=o+R(-0.05,0.05);c.push(candle(o,close,2.2,2.2,vv(70)));return{candles:c};},why:"Open and close are nearly equal, leaving a tiny body with wicks on both sides. It signals indecision — buyers and sellers balanced — that often precedes a turn."},
+  hammer:{name:"Hammer",bias:"bull",zoom:true,make(){const c=ctx(-1,4,16);const o=c[c.length-1].c,close=o+R(0.4,0.8);c.push(candle(o,close,0.25,2.6,vv(85)));return{candles:c};},why:"After a downtrend, a small body sits at the top of the range with a long lower wick. Sellers pushed down but buyers reclaimed it — a potential bullish reversal."},
+  shooting_star:{name:"Shooting Star",bias:"bear",zoom:true,make(){const c=ctx(1,4,11);const o=c[c.length-1].c,close=o-R(0.4,0.8);c.push(candle(o,close,2.6,0.25,vv(85)));return{candles:c};},why:"After an uptrend, a small body sits at the bottom with a long upper wick. Buyers spiked the price but sellers slammed it back — a potential bearish reversal."},
+  bull_engulfing:{name:"Bullish Engulfing",bias:"bull",zoom:true,make(){const c=ctx(-1,4,16);const base=c[c.length-1].c;c.push(candle(base+0.2,base-0.6,0.2,0.2,vv(50)));const o2=base-0.8;c.push(candle(o2,o2+2.4,0.3,0.3,vv(110)));return{candles:c};},why:"A small down candle is followed by a larger up candle whose body fully engulfs it. The shift from selling to strong buying signals a bullish reversal."},
+  bear_engulfing:{name:"Bearish Engulfing",bias:"bear",zoom:true,make(){const c=ctx(1,4,11);const base=c[c.length-1].c;c.push(candle(base-0.2,base+0.6,0.2,0.2,vv(50)));const o2=base+0.8;c.push(candle(o2,o2-2.4,0.3,0.3,vv(110)));return{candles:c};},why:"A small up candle is followed by a larger down candle whose body fully engulfs it. The shift from buying to strong selling signals a bearish reversal."},
+  morning_star:{name:"Morning Star",bias:"bull",zoom:true,make(){const c=ctx(-1,3,16);const a=c[c.length-1].c;c.push(candle(a+0.2,a-1.6,0.2,0.2,vv(80)));const g=a-1.8;c.push(candle(g,g-0.15,0.3,0.5,vv(40)));c.push(candle(g+0.1,g+1.9,0.3,0.3,vv(95)));return{candles:c};},why:"A three-candle bottom: a big down candle, a small indecisive ‘star’, then a strong up candle closing well into the first. It marks a bullish reversal."},
+  evening_star:{name:"Evening Star",bias:"bear",zoom:true,make(){const c=ctx(1,3,11);const a=c[c.length-1].c;c.push(candle(a-0.2,a+1.6,0.2,0.2,vv(80)));const g=a+1.8;c.push(candle(g,g+0.15,0.5,0.3,vv(40)));c.push(candle(g-0.1,g-1.9,0.3,0.3,vv(95)));return{candles:c};},why:"A three-candle top: a big up candle, a small indecisive ‘star’, then a strong down candle closing well into the first. It marks a bearish reversal."},
+  marubozu:{name:"Bullish Marubozu",bias:"bull",zoom:true,make(){const c=ctx(1,4,11);const o=c[c.length-1].c;c.push(candle(o,o+3,0.02,0.02,vv(120)));return{candles:c};},why:"A long candle with essentially no wicks — price opened at the low and closed at the high. It shows one-sided, decisive buying with no pushback."}
+};
+
+const LETTERS=["A","B","C","D"];
+const TICKERS=["ACME / USD","VRTX / USD","NOVA / USD","KILO / USD","ORYX / USD","ZEPH / USD","HELIO / USD","CRUX / USD","AXON / USD","DELTA / USD"];
+const CONFUSE={
+  head_shoulders:["inv_head_shoulders","double_top","rising_wedge"],
+  inv_head_shoulders:["head_shoulders","double_bottom","falling_wedge"],
+  double_top:["head_shoulders","double_bottom","rect_range"],
+  double_bottom:["inv_head_shoulders","double_top","rect_range"],
+  asc_triangle:["desc_triangle","rising_wedge","rect_range"],
+  desc_triangle:["asc_triangle","falling_wedge","rect_range"],
+  bull_flag:["bear_flag","rising_wedge","cup_handle"],
+  bear_flag:["bull_flag","falling_wedge","desc_triangle"],
+  falling_wedge:["rising_wedge","bull_flag","desc_triangle"],
+  rising_wedge:["falling_wedge","bear_flag","asc_triangle"],
+  cup_handle:["double_bottom","bull_flag","rect_range"],
+  rect_range:["asc_triangle","desc_triangle","double_top"],
+  doji:["hammer","shooting_star","marubozu"],
+  hammer:["shooting_star","doji","bull_engulfing"],
+  shooting_star:["hammer","doji","bear_engulfing"],
+  bull_engulfing:["bear_engulfing","hammer","morning_star"],
+  bear_engulfing:["bull_engulfing","shooting_star","evening_star"],
+  morning_star:["evening_star","bull_engulfing","hammer"],
+  evening_star:["morning_star","bear_engulfing","shooting_star"],
+  marubozu:["bull_engulfing","doji","bull_flag"]
+};
+
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+let LIB={},POOL=[],quiz=[],idx=0,score=0,streak=0,results=[];
+let DIFF="normal",SET="chart",TIMER_ON=false,SHOW_VOL=true,tHandle=null,tLeft=15;
+let curBase=[], curOverlays=[], curFull=[], curBaseLen=0, curBreakDir=0, revealHandle=null;
+
+function configure(){
+  if(SET==="chart")LIB=CHART; else if(SET==="candle")LIB=CANDLE; else LIB={...CHART,...CANDLE};
+  POOL=Object.keys(LIB);
+  if(DIFF==="easy"){NOISE=0.32;TIMER_ON=false;}
+  else if(DIFF==="normal"){NOISE=0.6;TIMER_ON=false;}
+  else {NOISE=1.0;TIMER_ON=true;}
+}
+function buildQuiz(){
+  const chosen=shuffle(POOL).slice(0,Math.min(10,POOL.length));
+  while(chosen.length<10) chosen.push(POOL[Math.floor(Math.random()*POOL.length)]);
+  quiz=chosen.map(key=>{
+    let distractors;
+    if(DIFF==="hard"){
+      const near=(CONFUSE[key]||[]).filter(k=>POOL.includes(k));
+      distractors=shuffle(near).slice(0,3);
+      while(distractors.length<3){const r=POOL[Math.floor(Math.random()*POOL.length)];if(r!==key&&!distractors.includes(r))distractors.push(r);}
+    } else { distractors=shuffle(POOL.filter(k=>k!==key)).slice(0,3); }
+    return {key,opts:shuffle([key,...distractors])};
+  });
+}
+const $=id=>document.getElementById(id);
+
+function startTimer(){
+  if(!TIMER_ON){$("timer").classList.add("hide");return;}
+  clearInterval(tHandle);tLeft=15;
+  const el=$("timer");el.classList.remove("hide","low");el.textContent="0:15";
+  tHandle=setInterval(()=>{tLeft--;el.textContent="0:"+String(tLeft).padStart(2,"0");if(tLeft<=5)el.classList.add("low");if(tLeft<=0){clearInterval(tHandle);autoFail();}},1000);
+}
+function fullScale(){
+  const highs=curFull.map(c=>c.h), lows=curFull.map(c=>c.l);
+  let max=Math.max(...highs), min=Math.min(...lows);
+  const pad=(max-min)*0.12; max+=pad; min-=pad;
+  const vmax=Math.max(...curFull.map(c=>c.v||1));
+  return {max,min,vmax};
+}
+function render(){
+  clearInterval(revealHandle);
+  const q=quiz[idx],p=LIB[q.key],data=p.make();
+  curBase=data.candles; curOverlays=data.overlays||[];
+  curBaseLen=curBase.length;
+  const cont=continuation(curBase[curBase.length-1].c, p.bias, 3);
+  curBreakDir=cont.dir;
+  curFull=[...curBase, ...cont.candles];
+  const sc=fullScale();
+  // initial view: pattern only, but scaled/laid-out for the full series so nothing jumps later
+  $("chart").innerHTML=renderChart(curBase,curOverlays,SHOW_VOL,null,sc,curFull.length);
+  $("sym").textContent=TICKERS[idx%TICKERS.length];
+  $("tf").textContent=p.zoom?"4H · candles":"1D · candles";
+  $("qno").textContent="Q"+(idx+1);
+  $("prog").textContent=(idx+1)+"/10";
+  $("prompt").textContent=p.zoom?"Which candlestick signal is this?":"Which pattern is forming?";
+  const box=$("options");box.innerHTML="";
+  q.opts.forEach((k,i)=>{const b=document.createElement("button");b.className="opt";b.innerHTML=`<span class="key">${LETTERS[i]}</span><span>${LIB[k].name}</span>`;b.onclick=()=>answer(k,b);box.appendChild(b);});
+  $("explain").classList.remove("show");
+  startTimer();
+}
+// animate the breakout candles appearing one by one after an answer
+function revealBreakout(){
+  const sc=fullScale();
+  let shown=curBaseLen;
+  const total=curFull.length;
+  revealHandle=setInterval(()=>{
+    shown++;
+    const slice=curFull.slice(0,shown);
+    $("chart").innerHTML=renderChart(slice,curOverlays,SHOW_VOL,curBaseLen,sc,curFull.length);
+    if(shown>=total){
+      clearInterval(revealHandle);
+      $("chart").innerHTML=renderChart(curFull,curOverlays,SHOW_VOL,curBaseLen,sc,curFull.length);
+    }
+  },220);
+}
+function lockOptions(correct,picked){
+  [...$("options").children].forEach(b=>{b.disabled=true;const label=b.querySelector("span:last-child").textContent;if(label===LIB[correct].name)b.classList.add("correct");else if(b===picked)b.classList.add("wrong");else b.classList.add("dim");});
+}
+function reveal(correct,hit,timeout){
+  const v=$("verdict");v.textContent=timeout?"✗ Time out":(hit?"✓ Correct read":"✗ Missed");v.className="verdict "+(hit?"hit":"miss");
+  const bias=LIB[correct].bias;
+  let resolveNote;
+  if(bias==="neutral") resolveNote=" Watch the replay: a neutral pattern can break either way — here it resolved "+(curBreakDir>0?"upward":"downward")+", but the direction isn’t predictable in advance.";
+  else resolveNote=" Watch the replay — this is the textbook resolution ("+(bias==="bull"?"breakout up":"breakdown")+"). Real charts fail this way often, so traders wait for the break to confirm.";
+  $("exp-text").textContent=LIB[correct].why+resolveNote;
+  const bEl=$("bias");bEl.className="bias "+(bias==="bull"?"bull":bias==="bear"?"bear":"neutral");bEl.textContent=bias==="bull"?"▲ Bullish bias":bias==="bear"?"▼ Bearish bias":"◆ Neutral / indecision";
+  $("next").textContent=idx===9?"See results →":"Next chart →";
+  $("explain").classList.add("show");
+}
+function answer(picked,btn){
+  clearInterval(tHandle);
+  const correct=quiz[idx].key,hit=picked===correct;
+  if(hit){score++;streak++;}else{streak=0;}
+  results.push({name:LIB[correct].name,hit});
+  $("score").textContent=score;$("streak").textContent=streak;
+  lockOptions(correct,btn);reveal(correct,hit,false);
+  revealBreakout();
+}
+function autoFail(){
+  const correct=quiz[idx].key;streak=0;results.push({name:LIB[correct].name,hit:false});$("streak").textContent=0;
+  lockOptions(correct,null);reveal(correct,false,true);
+  revealBreakout();
+}
+$("next").onclick=()=>{idx++;if(idx>=quiz.length)showEnd();else render();};
+function showEnd(){
+  clearInterval(tHandle);$("card").style.display="none";$("end").classList.add("show");
+  $("end-score").textContent=score+"/10";
+  const pct=score/10;let grade,line;
+  if(pct===1){grade="Desk Lead";line="Flawless tape reading. Every formation called correctly.";}
+  else if(pct>=0.8){grade="Senior Analyst";line="Strong eye. You're reading structure well — review the few you missed below.";}
+  else if(pct>=0.6){grade="Analyst";line="Solid foundation. The necklines and wick placement are worth a second look.";}
+  else if(pct>=0.4){grade="Junior Trader";line="Getting there. Focus on what separates reversals from continuations.";}
+  else {grade="Intern";line="Early days. Run it again — pattern recognition is pure reps.";}
+  $("end-grade").textContent=grade;$("end-line").textContent=line;
+  $("review").innerHTML=results.map((r,i)=>`<div class="row"><span>Q${i+1} · ${r.name}</span><span class="${r.hit?'ok':'no'}">${r.hit?'✓ hit':'✗ miss'}</span></div>`).join("");
+}
+$("restart").onclick=()=>{$("game").classList.add("hide");$("config").classList.remove("hide");$("end").classList.remove("show");$("card").style.display="block";};
+$("set-seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;[...$("set-seg").children].forEach(x=>x.classList.remove("on"));b.classList.add("on");SET=b.dataset.set;});
+$("diff-seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;[...$("diff-seg").children].forEach(x=>x.classList.remove("on"));b.classList.add("on");DIFF=b.dataset.diff;});
+$("start").onclick=()=>{configure();idx=0;score=0;streak=0;results=[];$("score").textContent=0;$("streak").textContent=0;$("config").classList.add("hide");$("game").classList.remove("hide");buildQuiz();render();};
+document.addEventListener("keydown",e=>{
+  if($("game").classList.contains("hide"))return;
+  const k=e.key.toUpperCase(),i=LETTERS.indexOf(k);
+  if(i>=0&&!$("explain").classList.contains("show")){const btn=$("options").children[i];if(btn&&!btn.disabled)btn.click();}
+  if(e.key==="Enter"&&$("explain").classList.contains("show"))$("next").click();
+});
+</script>
+</body>
+</html>
